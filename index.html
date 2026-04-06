@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Clash+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080808;
+  --surface:#0f0f0f;
+  --surface2:#151515;
+  --surface3:#1c1c1c;
+  --border:#1e1e1e;
+  --border2:#272727;
+  --text:#efefef;
+  --muted:#4a4a4a;
+  --dim:#282828;
+  --green:#16a34a;
+  --green-bright:#22c55e;
+  --red:#dc2626;
+  --red-bright:#ef4444;
+  --blue:#1d4ed8;
+  --blue-bright:#3b82f6;
+  --gold:#92400e;
+  --gold-bright:#f59e0b;
+  --us:#2563eb;
+  --pk:#16a34a;
+  --poke:#d97706;
+  --radius:8px;
+  --radius-lg:12px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Mono',monospace}
+.app{display:grid;grid-template-rows:auto 1fr;min-height:100vh}
+
+/* HEADER */
+.header{padding:20px 28px;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:rgba(8,8,8,0.92);backdrop-filter:blur(12px);z-index:100}
+.header-left{display:flex;align-items:baseline;gap:12px}
+.logo{font-family:'Clash Display',sans-serif;font-size:18px;font-weight:700;letter-spacing:-0.5px;color:var(--text)}
+.logo span{color:var(--muted);font-weight:400}
+.header-time{font-size:10px;color:var(--muted);letter-spacing:.5px}
+.header-right{display:flex;gap:8px;align-items:center}
+.sync-btn{background:transparent;border:0.5px solid var(--border2);border-radius:var(--radius);color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;padding:6px 12px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:6px}
+.sync-btn:hover{border-color:#3a3a3a;color:var(--text)}
+.sync-btn.syncing{border-color:var(--blue-bright);color:var(--blue-bright)}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green-bright);box-shadow:0 0 6px var(--green-bright)}
+.sync-dot.off{background:var(--muted);box-shadow:none}
+
+/* MAIN LAYOUT */
+.main{display:grid;grid-template-columns:220px 1fr;height:100%}
+
+/* SIDEBAR */
+.sidebar{border-right:0.5px solid var(--border);padding:20px 0;display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:12px;color:var(--muted);cursor:pointer;transition:.1s;border-left:2px solid transparent;letter-spacing:.3px}
+.nav-item:hover{color:var(--text);background:var(--surface2)}
+.nav-item.active{color:var(--text);border-left-color:var(--text);background:var(--surface2)}
+.nav-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.nav-section{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;padding:16px 20px 6px;margin-top:8px}
+.sidebar-footer{margin-top:auto;padding:16px 20px;border-top:0.5px solid var(--border)}
+.sheet-link{font-size:10px;color:var(--muted);text-decoration:none;display:flex;align-items:center;gap:6px;transition:.1s}
+.sheet-link:hover{color:var(--text)}
+
+/* CONTENT */
+.content{overflow-y:auto;padding:28px}
+.page{display:none}
+.page.active{display:block}
+
+/* SUMMARY CARDS */
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px}
+.card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:16px}
+.card-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+.card-value{font-size:22px;font-weight:500;letter-spacing:-1px;line-height:1}
+.card-sub{font-size:11px;margin-top:6px}
+.pos{color:var(--green-bright)}.neg{color:var(--red-bright)}.neu{color:var(--muted)}
+
+/* TABLE */
+.table-header{display:grid;gap:8px;padding:8px 14px;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:0.5px solid var(--border)}
+.table-row{display:grid;gap:8px;padding:13px 14px;border-bottom:0.5px solid var(--border);align-items:center;transition:.1s}
+.table-row:hover{background:var(--surface2)}
+.table-row:last-child{border-bottom:none}
+.us-cols{grid-template-columns:2fr 1fr 1fr 1fr 1fr 36px}
+.ticker-name{font-size:13px;font-weight:500;font-family:'Clash Display',sans-serif;letter-spacing:-.3px}
+.ticker-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.cell{font-size:12px}
+.table-wrap{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:12px}
+.section-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+
+/* POKEMON CARDS */
+.poke-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.poke-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.poke-card-header{padding:13px 14px;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start}
+.poke-card-name{font-size:12px;font-weight:500;line-height:1.4;max-width:180px}
+.poke-card-grade{display:inline-block;font-size:9px;padding:2px 7px;border-radius:4px;background:var(--surface3);color:var(--muted);margin-top:4px;letter-spacing:.4px}
+.poke-card-body{padding:13px 14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.poke-stat-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.poke-stat-val{font-size:12px;font-weight:500}
+.poke-refresh{background:transparent;border:0.5px solid var(--border2);border-radius:5px;color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;padding:3px 7px;cursor:pointer;transition:.1s;flex-shrink:0}
+.poke-refresh:hover{color:var(--text);border-color:#3a3a3a}
+
+/* OVERVIEW */
+.overview-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.alloc-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.alloc-label{font-size:11px;width:80px;flex-shrink:0;color:var(--muted)}
+.alloc-bar-bg{flex:1;background:var(--surface3);border-radius:2px;height:4px;overflow:hidden}
+.alloc-bar{height:100%;border-radius:2px;transition:width .6s ease}
+.alloc-pct{font-size:11px;color:var(--muted);width:36px;text-align:right;flex-shrink:0}
+.alloc-val{font-size:11px;width:90px;text-align:right;flex-shrink:0}
+
+/* REFRESH BAR */
+.refresh-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.refresh-status{font-size:10px;color:var(--muted)}
+.refresh-btn{background:transparent;border:0.5px solid var(--border2);border-radius:var(--radius);color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;padding:5px 12px;cursor:pointer;transition:.1s}
+.refresh-btn:hover{color:var(--text);border-color:#3a3a3a}
+.spinner{display:inline-block;width:8px;height:8px;border:1.5px solid var(--dim);border-top-color:var(--blue-bright);border-radius:50%;animation:spin .6s linear infinite;margin-right:5px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* LOADING */
+.loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:999}
+.loading-logo{font-family:'Clash Display',sans-serif;font-size:24px;font-weight:700;color:var(--text)}
+.loading-sub{font-size:11px;color:var(--muted)}
+.loading-bar{width:200px;height:1px;background:var(--border);border-radius:1px;overflow:hidden;margin-top:8px}
+.loading-progress{height:100%;background:var(--text);border-radius:1px;animation:load 1.8s ease forwards}
+@keyframes load{from{width:0}to{width:100%}}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:48px;color:var(--muted);font-size:11px}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface3);border:0.5px solid var(--border2);border-radius:var(--radius);padding:10px 16px;font-size:11px;color:var(--text);z-index:999;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* SHEET SETUP BANNER */
+.setup-banner{background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-lg);padding:20px;margin-bottom:20px}
+.setup-title{font-family:'Clash Display',sans-serif;font-size:15px;font-weight:600;margin-bottom:6px}
+.setup-sub{font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:14px}
+.setup-input{background:var(--surface3);border:0.5px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:8px 12px;width:100%;outline:none;margin-bottom:8px}
+.setup-input:focus{border-color:#3a3a3a}
+.setup-btn{background:var(--text);border:none;border-radius:var(--radius);color:var(--bg);font-family:'DM Mono',monospace;font-size:12px;font-weight:500;padding:8px 18px;cursor:pointer;transition:.1s}
+.setup-btn:hover{background:#ccc}
+
+@media(max-width:768px){
+  .main{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .summary-grid{grid-template-columns:repeat(2,1fr)}
+  .overview-grid{grid-template-columns:1fr}
+  .us-cols{grid-template-columns:2fr 1fr 1fr 1fr}
+  .us-cols .col-chg,.us-cols .col-act{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loading">
+  <div class="loading-logo">Portfolio</div>
+  <div class="loading-sub">Loading your holdings...</div>
+  <div class="loading-bar"><div class="loading-progress"></div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="app">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">Portfolio <span>/ tracker</span></div>
+      <div class="header-time" id="header-time"></div>
+    </div>
+    <div class="header-right">
+      <span class="sync-dot off" id="sync-dot"></span>
+      <button class="sync-btn" id="sync-all-btn" onclick="syncAll()">Sync all prices</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="sidebar">
+      <div class="nav-section">Markets</div>
+      <div class="nav-item active" onclick="showPage('overview')">
+        <span class="nav-dot" style="background:#4a4a4a"></span>Overview
+      </div>
+      <div class="nav-item" onclick="showPage('us')">
+        <span class="nav-dot" style="background:var(--us)"></span>US Stocks
+      </div>
+      <div class="nav-item" onclick="showPage('pk')">
+        <span class="nav-dot" style="background:var(--pk)"></span>PSX Pakistan
+      </div>
+      <div class="nav-item" onclick="showPage('poke')">
+        <span class="nav-dot" style="background:var(--poke)"></span>Pokemon Slabs
+      </div>
+
+      <div class="sidebar-footer">
+        <a class="sheet-link" id="sheet-link" href="holdings.json" target="_blank">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Edit holdings.json on GitHub
+        </a>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- OVERVIEW PAGE -->
+      <div class="page active" id="page-overview">
+        <div class="summary-grid">
+          <div class="card">
+            <div class="card-label">Total Portfolio (USD)</div>
+            <div class="card-value" id="total-value">-</div>
+            <div class="card-sub" id="total-pl"><span class="neu">-</span></div>
+          </div>
+          <div class="card">
+            <div class="card-label">US Stocks</div>
+            <div class="card-value" id="us-value">-</div>
+            <div class="card-sub" id="us-pl"><span class="neu">NYSE / NASDAQ</span></div>
+          </div>
+          <div class="card">
+            <div class="card-label">PSX Pakistan</div>
+            <div class="card-value" id="pk-value">-</div>
+            <div class="card-sub" id="pk-pl"><span class="neu">KSE</span></div>
+          </div>
+          <div class="card">
+            <div class="card-label">Pokemon Slabs</div>
+            <div class="card-value" id="poke-value">-</div>
+            <div class="card-sub" id="poke-pl"><span class="neu">Graded</span></div>
+          </div>
+        </div>
+
+        <div class="overview-grid">
+          <div class="card">
+            <div class="card-label" style="margin-bottom:16px">Allocation</div>
+            <div id="alloc-chart"></div>
+          </div>
+          <div class="card">
+            <div class="card-label" style="margin-bottom:16px">P&amp;L by Market</div>
+            <div style="position:relative;height:160px"><canvas id="pl-chart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- US STOCKS PAGE -->
+      <div class="page" id="page-us">
+        <div class="refresh-bar">
+          <span class="refresh-status" id="us-status">Ready to sync</span>
+          <button class="refresh-btn" onclick="syncUS()">Refresh US prices</button>
+        </div>
+        <div class="table-wrap">
+          <div class="table-header us-cols">
+            <span>Stock</span><span>Price</span><span class="col-chg">Change</span><span>Value</span><span>P&amp;L</span><span class="col-act"></span>
+          </div>
+          <div id="us-table"></div>
+        </div>
+      </div>
+
+      <!-- PSX PAGE -->
+      <div class="page" id="page-pk">
+        <div class="refresh-bar">
+          <span class="refresh-status" id="pk-status">Ready to sync</span>
+          <button class="refresh-btn" onclick="syncPK()">Refresh PSX prices</button>
+        </div>
+        <div class="table-wrap">
+          <div class="table-header us-cols">
+            <span>Stock</span><span>Price (PKR)</span><span class="col-chg">Change</span><span>Value</span><span>P&amp;L</span><span class="col-act"></span>
+          </div>
+          <div id="pk-table"></div>
+        </div>
+      </div>
+
+      <!-- POKEMON PAGE -->
+      <div class="page" id="page-poke">
+        <div class="refresh-bar">
+          <span class="refresh-status" id="poke-status">Ready to sync</span>
+          <button class="refresh-btn" onclick="syncAllPoke()">Refresh all card prices</button>
+        </div>
+        <div class="poke-grid" id="poke-grid"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────
+// Prices are fetched by GitHub Actions daily and stored in prices.json
+// Holdings are stored in holdings.json - edit that file to update positions
+
+// ── STATE ─────────────────────────────────────────────────────────────
+var state = {
+  us:   [],
+  pk:   [],
+  poke: [],
+  prices: { us: {}, pk: {} }
+};
+
+// ── CLOCK ─────────────────────────────────────────────────────────────
+function updateClock() {
+  var now = new Date();
+  document.getElementById("header-time").textContent = now.toLocaleTimeString("en-US", {hour:"2-digit", minute:"2-digit", hour12:true}) + " PKT";
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── FORMATTING ────────────────────────────────────────────────────────
+function fmt(n, d) {
+  if (d === undefined) d = 2;
+  if (n === undefined || n === null || isNaN(n)) return "-";
+  return n.toLocaleString("en-US", {minimumFractionDigits:d, maximumFractionDigits:d});
+}
+function fmtUSD(n) { if (n === null || isNaN(n)) return "-"; return (n >= 0 ? "$" : "-$") + fmt(Math.abs(n)); }
+function fmtPKR(n) { if (n === null || isNaN(n)) return "-"; return "Rs." + fmt(Math.abs(n), 0); }
+function fmtPct(p) { if (p === null || isNaN(p)) return ""; return (p >= 0 ? "+" : "") + fmt(p, 2) + "%"; }
+function signUSD(n) { return (n >= 0 ? "+" : "") + fmtUSD(n); }
+function signPKR(n) { return (n >= 0 ? "+" : "") + fmtPKR(n); }
+function cls(n)    { return n >= 0 ? "pos" : "neg"; }
+
+// ── TOAST ─────────────────────────────────────────────────────────────
+var toastTimer;
+function toast(msg) {
+  var el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ el.classList.remove("show"); }, 3000);
+}
+
+// ── GOOGLE SHEETS ─────────────────────────────────────────────────────
+function parseGoogleVizResponse(raw) {
+  var jsonText = raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1);
+  return JSON.parse(jsonText);
+}
+
+function toNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "number") return value;
+  var cleaned = String(value).replace(/[^0-9.-]/g, "");
+  var num = parseFloat(cleaned);
+  return isNaN(num) ? null : num;
+}
+
+async function fetchSheetTab(sheetId, tabName) {
+  var url = "https://docs.google.com/spreadsheets/d/" + sheetId + "/gviz/tq?sheet=" + encodeURIComponent(tabName) + "&tqx=out:json";
+  var res = await fetch(url);
+  if (!res.ok) throw new Error("Failed to load tab " + tabName + ": " + res.status);
+  var raw = await res.text();
+  var parsed = parseGoogleVizResponse(raw);
+  return (parsed.table && parsed.table.rows) ? parsed.table.rows : [];
+}
+
+function rowsToObjects(rows, kind) {
+  var out = [];
+  rows.forEach(function(row, index) {
+    var cells = row.c || [];
+    function cell(i) { return cells[i] && cells[i].v !== undefined ? cells[i].v : null; }
+    if (kind === "poke") {
+      var name = cell(0);
+      if (!name) return;
+
+      // Supports both legacy format:
+      // Name | Grade | Qty | AvgCost
+      // and new structured format:
+      // Name | Set | Number | Edition | Grade | Qty | AvgCost
+      var structured = cell(4) !== null || cell(5) !== null || cell(6) !== null;
+      var setName = structured ? cell(1) : null;
+      var number = structured ? cell(2) : null;
+      var edition = structured ? cell(3) : null;
+      var grade = structured ? cell(4) : cell(1);
+      var qty = structured ? cell(5) : cell(2);
+      var avgCost = structured ? cell(6) : cell(3);
+
+      out.push({
+        id: index + 1,
+        name: String(name).trim(),
+        set: String(setName || "").trim(),
+        number: String(number || "").replace(/^#/, "").trim(),
+        edition: String(edition || "").trim(),
+        grade: String(grade || "Ungraded").trim(),
+        qty: toNumber(qty) || 0,
+        avgCost: toNumber(avgCost) || 0,
+        marketPrice: null
+      });
+    } else {
+      var ticker = cell(0);
+      if (!ticker) return;
+      out.push({
+        ticker: String(ticker).trim().toUpperCase(),
+        qty: toNumber(cell(1)) || 0,
+        avgCost: toNumber(cell(2)) || 0
+      });
+    }
+  });
+  return out;
+}
+
+async function loadHoldings() {
+  try {
+    var res = await fetch("holdings.json?v=" + Date.now());
+    if (!res.ok) throw new Error("holdings.json not found");
+    var data = await res.json();
+    state.us   = data.us   || [];
+    state.pk   = data.pk   || [];
+    state.poke = (data.poke || []).map(function(p) {
+      return Object.assign({marketPrice: null}, p);
+    });
+    return true;
+  } catch(e) {
+    console.error("Holdings error:", e);
+    return false;
+  }
+}
+
+async function loadPrices() {
+  try {
+    var res = await fetch("prices.json?v=" + Date.now());
+    if (!res.ok) return;
+    var data = await res.json();
+    if (data.us) state.prices.us = data.us;
+    if (data.pk) state.prices.pk = data.pk;
+    if (data.poke) {
+      state.poke.forEach(function(card) {
+        var pd = data.poke[String(card.id)];
+        if (pd && pd.price) card.marketPrice = pd.price;
+      });
+    }
+    if (data.updated) {
+      var d = new Date(data.updated);
+      document.getElementById("header-time").textContent =
+        "Prices: " + d.toLocaleDateString("en-US",{month:"short",day:"numeric"}) +
+        " " + d.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",hour12:true});
+    }
+  } catch(e) {
+    console.error("Prices error:", e);
+  }
+}
+
+// ── FINNHUB PRICES ────────────────────────────────────────────────────
+async function fetchFinnhub(symbol) {
+  try {
+    var url = "https://finnhub.io/api/v1/quote?symbol=" + symbol + "&token=" + CONFIG.finnhubKey;
+    var res = await fetch(url);
+    var data = await res.json();
+    if (data.c && data.c > 0) {
+      var chg = data.pc > 0 ? ((data.c - data.pc) / data.pc) * 100 : 0;
+      return {price: data.c, change_pct: chg, prev: data.pc};
+    }
+    return null;
+  } catch(e) { return null; }
+}
+
+async function syncUS() {
+  if (!state.us.length) { toast("No US holdings loaded"); return; }
+  var sEl = document.getElementById("us-status");
+  sEl.innerHTML = '<span class="spinner"></span>Fetching...';
+  var failed = 0;
+  for (var i = 0; i < state.us.length; i++) {
+    var h = state.us[i];
+    var result = await fetchFinnhub(h.ticker);
+    if (result) {
+      state.prices.us[h.ticker] = result;
+    } else {
+      failed++;
+    }
+  }
+  sEl.textContent = "Updated " + new Date().toLocaleTimeString() + (failed > 0 ? " (" + failed + " failed)" : "");
+  setSyncDot(true);
+  renderUS();
+  renderSummary();
+  if (document.getElementById("page-overview").classList.contains("active")) renderOverview();
+  if (failed === 0) toast("US prices updated");
+}
+
+function normalizePSXSymbol(ticker) {
+  var t = String(ticker || "").trim().toUpperCase();
+  if (!t) return "";
+  if (t.endsWith(".KA")) return t;
+  return t + ".KA";
+}
+
+async function fetchYahooChartMeta(symbol) {
+  var yahooUrl = "https://query1.finance.yahoo.com/v8/finance/chart/" + symbol + "?interval=1d&range=2d";
+  var proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(yahooUrl);
+  var res = await fetch(proxyUrl);
+  var wrapper = await res.json();
+  var data = JSON.parse(wrapper.contents || "{}");
+  if (!data.chart || !data.chart.result || !data.chart.result[0] || !data.chart.result[0].meta) {
+    throw new Error("No Yahoo Finance data for " + symbol);
+  }
+  return data.chart.result[0].meta;
+}
+
+async function syncPK() {
+  if (!state.pk.length) { toast("No PSX holdings loaded"); return; }
+  var sEl = document.getElementById("pk-status");
+  sEl.innerHTML = '<span class="spinner"></span>Fetching...';
+  var failed = 0;
+  for (var i = 0; i < state.pk.length; i++) {
+    var h = state.pk[i];
+    try {
+      var sym = normalizePSXSymbol(h.ticker);
+      var meta = await fetchYahooChartMeta(sym);
+      var price = meta.regularMarketPrice;
+      var prev  = meta.chartPreviousClose || meta.previousClose || price;
+      var chg   = prev ? ((price - prev) / prev) * 100 : 0;
+      state.prices.pk[h.ticker] = {price: price, change_pct: chg, symbol: sym};
+    } catch(e) {
+      failed++;
+      console.warn("PSX fetch failed for", h.ticker, e);
+    }
+  }
+  sEl.textContent = "Updated " + new Date().toLocaleTimeString() + (failed > 0 ? " (" + failed + " failed)" : "");
+  setSyncDot(true);
+  renderPK();
+  renderSummary();
+  if (document.getElementById("page-overview").classList.contains("active")) renderOverview();
+  if (failed === 0) toast("PSX prices updated");
+}
+
+// ── PRICECHARTING ─────────────────────────────────────────────────────
+async function syncOnePoke(id) {
+  await loadPrices();
+  renderPoke(); renderSummary();
+  if (document.getElementById("page-overview").classList.contains("active")) renderOverview();
+  toast("Prices reloaded from latest snapshot");
+}
+
+async function syncAllPoke() {
+  var sEl = document.getElementById("poke-status");
+  sEl.innerHTML = '<span class="spinner"></span>Reloading...';
+  await loadPrices();
+  sEl.textContent = "Prices are updated daily by GitHub Actions";
+  setSyncDot(true);
+  renderPoke();
+  renderSummary();
+  if (document.getElementById("page-overview").classList.contains("active")) renderOverview();
+  toast("All card prices updated");
+}
+
+async function syncAll() {
+  var btn = document.getElementById("sync-all-btn");
+  btn.classList.add("syncing");
+  btn.innerHTML = '<span class="spinner"></span>Loading...';
+  await loadPrices();
+  renderAll(); renderOverview();
+  setSyncDot(true);
+  btn.classList.remove("syncing");
+  btn.textContent = "Sync all prices";
+  toast("Prices reloaded");
+}
+
+function setSyncDot(on) {
+  var dot = document.getElementById("sync-dot");
+  dot.classList.toggle("off", !on);
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────
+function renderUS() {
+  var el = document.getElementById("us-table");
+  if (!state.us.length) { el.innerHTML = '<div class="empty">No US holdings in your sheet</div>'; return; }
+  var html = "";
+  state.us.forEach(function(h) {
+    var pd    = state.prices.us[h.ticker];
+    var price = pd ? pd.price : null;
+    var chg   = pd ? pd.change_pct : null;
+    var val   = price !== null ? price * h.qty : null;
+    var cost  = h.avgCost * h.qty;
+    var pl    = val !== null ? val - cost : null;
+    var plPct = (pl !== null && cost) ? (pl/cost)*100 : null;
+    html += '<div class="table-row us-cols">'
+      + '<div><div class="ticker-name">' + h.ticker + '</div><div class="ticker-sub">' + fmt(h.qty,4) + ' sh &middot; avg ' + fmtUSD(h.avgCost) + '</div></div>'
+      + '<div class="cell">' + (price !== null ? fmtUSD(price) : '<span style="color:var(--muted)">-</span>') + '</div>'
+      + '<div class="cell col-chg">' + (chg !== null ? '<span class="' + cls(chg) + '">' + fmtPct(chg) + '</span>' : '<span style="color:var(--muted)">-</span>') + '</div>'
+      + '<div class="cell">' + (val !== null ? fmtUSD(val) : '<span style="color:var(--muted)">-</span>') + '</div>'
+      + '<div class="cell">' + (pl !== null ? '<span class="' + cls(pl) + '">' + signUSD(pl) + (plPct !== null ? ' <span style="font-size:10px;opacity:.7">(' + fmtPct(plPct) + ')</span>' : '') + '</span>' : '<span style="color:var(--muted)">-</span>') + '</div>'
+      + '<div class="col-act"></div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function renderPK() {
+  var el = document.getElementById("pk-table");
+  if (!state.pk.length) { el.innerHTML = '<div class="empty">No PSX holdings in your sheet</div>'; return; }
+  var html = "";
+  state.pk.forEach(function(h) {
+    var pd    = state.prices.pk[h.ticker];
+    var price = pd ? pd.price : null;
+    var chg   = pd ? pd.change_pct : null;
+    var val   = price !== null ? price * h.qty : null;
+    var cost  = h.avgCost * h.qty;
+    var pl    = val !== null ? val - cost : null;
+    var plPct = (pl !== null && cost) ? (pl/cost)*100 : null;
+    html += '<div class="table-row us-cols">'
+      + '<div><div class="ticker-name">' + h.ticker + '</div><div class="ticker-sub">' + fmt(h.qty,0) + ' sh &middot; avg ' + fmtPKR(h.avgCost) + '</div></div>'
+      + '<div class="cell">' + (price !== null ? fmtPKR(price) : '<span style="color:var(--muted)">-</span>') + '</div>'
+      + '<div class="cell col-chg">' + (chg !== null ? '<span class="' + cls(chg) + '">' + fmtPct(chg) + '</span>' : '<span style="color:var(--muted)">-</span>') + '</div>'
+      + '<div class="cell">' + (val !== null ? fmtPKR(val) : '<span style="color:var(--muted)">-</span>') + '</div>'
+      + '<div class="cell">' + (pl !== null ? '<span class="' + cls(pl) + '">' + signPKR(pl) + (plPct !== null ? ' <span style="font-size:10px;opacity:.7">(' + fmtPct(plPct) + ')</span>' : '') + '</span>' : '<span style="color:var(--muted)">-</span>') + '</div>'
+      + '<div class="col-act"></div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function renderPoke() {
+  var el = document.getElementById("poke-grid");
+  if (!state.poke.length) { el.innerHTML = '<div class="empty">No Pokemon holdings in your sheet</div>'; return; }
+  var html = "";
+  state.poke.forEach(function(p) {
+    var price = p.marketPrice !== undefined ? p.marketPrice : null;
+    var val   = price !== null ? price * p.qty : null;
+    var cost  = p.avgCost * p.qty;
+    var pl    = val !== null ? val - cost : null;
+    var plPct = (pl !== null && cost) ? (pl/cost)*100 : null;
+    html += '<div class="poke-card">'
+      + '<div class="poke-card-header">'
+      + '<div><div class="poke-card-name">' + p.name + '</div><div class="poke-card-grade">' + [p.set, p.number ? ('#' + p.number) : '', p.edition, p.grade, 'Qty ' + p.qty].filter(Boolean).join(' &middot; ') + '</div></div>'
+      + '<button class="poke-refresh" id="poke-btn-' + p.id + '" onclick="syncOnePoke(' + p.id + ')">refresh</button>'
+      + '</div>'
+      + '<div class="poke-card-body">'
+      + '<div><div class="poke-stat-label">Market</div><div class="poke-stat-val">' + (price !== null ? fmtUSD(price) : '-') + '</div></div>'
+      + '<div><div class="poke-stat-label">Value</div><div class="poke-stat-val">' + (val !== null ? fmtUSD(val) : '-') + '</div></div>'
+      + '<div><div class="poke-stat-label">Cost</div><div class="poke-stat-val">' + fmtUSD(cost) + '</div></div>'
+      + '<div><div class="poke-stat-label">P&amp;L</div><div class="poke-stat-val ' + (pl !== null ? cls(pl) : '') + '">' + (pl !== null ? signUSD(pl) : '-') + '</div></div>'
+      + '<div><div class="poke-stat-label">Return</div><div class="poke-stat-val ' + (plPct !== null ? cls(plPct) : '') + '">' + (plPct !== null ? fmtPct(plPct) : '-') + '</div></div>'
+      + '<div><div class="poke-stat-label">Paid</div><div class="poke-stat-val">' + fmtUSD(p.avgCost) + '</div></div>'
+      + '</div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function calcTotal(market) {
+  var total = 0;
+  if (market === "poke") {
+    state.poke.forEach(function(p){ if (p.marketPrice !== null && p.marketPrice !== undefined) total += p.marketPrice * p.qty; });
+  } else {
+    state[market].forEach(function(h){
+      var pd = state.prices[market][h.ticker];
+      if (pd && pd.price) total += pd.price * h.qty;
+    });
+  }
+  return total;
+}
+function calcCost(market) {
+  if (market === "poke") return state.poke.reduce(function(s,p){ return s + p.avgCost * p.qty; }, 0);
+  return state[market].reduce(function(s,h){ return s + h.avgCost * h.qty; }, 0);
+}
+
+function renderSummary() {
+  var usV = calcTotal("us"), pkV = calcTotal("pk"), pokeV = calcTotal("poke");
+  var usC = calcCost("us"), pkC = calcCost("pk"), pokeC = calcCost("poke");
+
+  document.getElementById("us-value").textContent   = usV   ? fmtUSD(usV)   : "-";
+  document.getElementById("pk-value").textContent   = pkV   ? fmtPKR(pkV)   : "-";
+  document.getElementById("poke-value").textContent = pokeV ? fmtUSD(pokeV) : "-";
+  document.getElementById("total-value").textContent = (usV + pokeV) ? fmtUSD(usV + pokeV) : "-";
+
+  function setPL(id, val, cost, sgnFn, fallback) {
+    var el = document.getElementById(id);
+    if (!val || !cost) { el.innerHTML = '<span class="neu">' + fallback + '</span>'; return; }
+    var pl = val - cost, p = (pl/cost)*100;
+    el.innerHTML = '<span class="' + cls(pl) + '">' + sgnFn(pl) + ' (' + fmtPct(p) + ')</span>';
+  }
+  setPL("us-pl",   usV,   usC,   signUSD, "NYSE / NASDAQ");
+  setPL("pk-pl",   pkV,   pkC,   signPKR, "KSE");
+  setPL("poke-pl", pokeV, pokeC, signUSD, "Graded");
+
+  var tv = usV + pokeV, tc = usC + pokeC, tpl = tv - tc, tp = tc ? (tpl/tc)*100 : null;
+  var tEl = document.getElementById("total-pl");
+  if (tv && tc) tEl.innerHTML = '<span class="' + cls(tpl) + '">' + signUSD(tpl) + (tp !== null ? ' (' + fmtPct(tp) + ')' : '') + '</span>';
+  else tEl.innerHTML = '<span class="neu">-</span>';
+}
+
+var plChart;
+function renderOverview() {
+  var markets = [
+    {key:"us",   label:"US Stocks", color:"#2563eb"},
+    {key:"pk",   label:"PSX",       color:"#16a34a"},
+    {key:"poke", label:"Pokemon",   color:"#d97706"}
+  ];
+  var totalVal = markets.reduce(function(s,m){ return s + calcTotal(m.key); }, 0);
+  var html = "";
+  markets.forEach(function(m) {
+    var val = calcTotal(m.key);
+    var p   = totalVal > 0 ? (val/totalVal)*100 : 0;
+    var cur = m.key === "pk" ? fmtPKR : fmtUSD;
+    html += '<div class="alloc-row">'
+      + '<div class="alloc-label" style="color:' + m.color + '">' + m.label + '</div>'
+      + '<div class="alloc-bar-bg"><div class="alloc-bar" style="width:' + Math.round(p) + '%;background:' + m.color + '"></div></div>'
+      + '<div class="alloc-pct">' + Math.round(p) + '%</div>'
+      + '<div class="alloc-val" style="color:var(--muted)">' + (val ? cur(val) : '-') + '</div></div>';
+  });
+  document.getElementById("alloc-chart").innerHTML = html;
+
+  var plData = markets.map(function(m){ return calcTotal(m.key) - calcCost(m.key); });
+  var colors = plData.map(function(v){ return v >= 0 ? "#22c55e" : "#ef4444"; });
+  if (plChart) { plChart.destroy(); plChart = null; }
+  var ctx = document.getElementById("pl-chart");
+  if (ctx) plChart = new Chart(ctx, {
+    type:"bar",
+    data:{labels:["US","PSX","Pokemon"], datasets:[{data:plData, backgroundColor:colors, borderRadius:4, borderSkipped:false}]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:"rgba(255,255,255,0.03)"}, ticks:{color:"#333", font:{size:10, family:"DM Mono"}}},
+        y:{grid:{color:"rgba(255,255,255,0.03)"}, ticks:{color:"#333", font:{size:10, family:"DM Mono"}, callback:function(v){return "$"+Math.round(v);}}}
+      }}
+  });
+}
+
+function renderAll() {
+  renderUS();
+  renderPK();
+  renderPoke();
+  renderSummary();
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll(".page").forEach(function(p){ p.classList.remove("active"); });
+  document.querySelectorAll(".nav-item").forEach(function(n){ n.classList.remove("active"); });
+  document.getElementById("page-" + name).classList.add("active");
+  var items = document.querySelectorAll(".nav-item");
+  var names = ["overview","us","pk","poke"];
+  items.forEach(function(item, i){ if (names[i] === name) item.classList.add("active"); });
+  if (name === "overview") renderOverview();
+}
+
+// ── SHEET ID SETUP ────────────────────────────────────────────────────
+function saveSheetId() {
+  var val = document.getElementById("sheet-id-input").value.trim();
+  if (!val) return;
+  // Extract ID from URL if user pastes full URL
+  var match = val.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  var id = match ? match[1] : val;
+  localStorage.setItem("portfolio_sheet_id", id);
+  document.getElementById("sheet-link").href = "https://docs.google.com/spreadsheets/d/" + id;
+  init();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────
+async function init() {
+  var sheetId = localStorage.getItem("portfolio_sheet_id") || CONFIG.defaultSheetId;
+
+  if (!sheetId) {
+    // Show setup prompt
+    document.getElementById("loading").style.display = "none";
+    var overviewPage = document.getElementById("page-overview");
+    overviewPage.innerHTML = '<div class="setup-banner">'
+      + '<div class="setup-title">Connect your Google Sheet</div>'
+      + '<div class="setup-sub">Paste your Google Sheet URL or ID below. Your holdings will load automatically. To update holdings just edit the sheet and hit Sync.<br><br>Make sure the sheet has 3 tabs: <strong>US_Stocks</strong>, <strong>PSX</strong>, and <strong>Pokemon</strong> with columns: Ticker/Name, Shares/Qty, AvgCost. Pokemon supports either the old 4-column format or the new 7-column format: Name, Set, Number, Edition, Grade, Qty, AvgCost.</div>'
+      + '<input class="setup-input" id="sheet-id-input" placeholder="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit">'
+      + '<button class="setup-btn" onclick="saveSheetId()">Connect Sheet</button>'
+      + '</div>'
+      + '<div class="summary-grid">'
+      + '<div class="card"><div class="card-label">Total Portfolio (USD)</div><div class="card-value">-</div></div>'
+      + '<div class="card"><div class="card-label">US Stocks</div><div class="card-value">-</div></div>'
+      + '<div class="card"><div class="card-label">PSX Pakistan</div><div class="card-value">-</div></div>'
+      + '<div class="card"><div class="card-label">Pokemon Slabs</div><div class="card-value">-</div></div>'
+      + '</div>';
+    return;
+  }
+
+  var loaded = await loadHoldings();
+
+  document.getElementById("loading").style.display = "none";
+
+  if (!loaded) {
+    toast("Could not load sheet. Make sure the Google Sheet is public or anyone-with-link viewable.");
+    renderAll();
+    return;
+  }
+
+  renderAll();
+  renderOverview();
+  toast("Holdings loaded from Google Sheets");
+  // Prices loaded from prices.json (updated daily by GitHub Actions)
+}
+
+init();
+</script>
+</body>
+</html>
