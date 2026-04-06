@@ -2,8 +2,8 @@ name: Update Prices
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # Every day at 6am UTC (11am PKT)
-  workflow_dispatch:       # Also allows manual trigger from GitHub
+    - cron: '0 6 * * *'
+  workflow_dispatch:
 
 jobs:
   update:
