@@ -1,24 +1,24 @@
 {
   "us": {
     "NVDA": {
-      "price": 206.64,
-      "change_pct": 2.93
+      "price": 211.94,
+      "change_pct": 2.56
     },
     "VOO": {
-      "price": 696.4,
-      "change_pct": 1.42
+      "price": 708.98,
+      "change_pct": 1.81
     },
     "WULF": {
-      "price": 18.83,
-      "change_pct": 6.63
+      "price": 18.88,
+      "change_pct": 0.27
     },
     "KRKNF": {
-      "price": 4.175,
-      "change_pct": 0.6
+      "price": 4.2598,
+      "change_pct": 2.03
     },
     "IBKR": {
-      "price": 87.75,
-      "change_pct": -0.27
+      "price": 88.63,
+      "change_pct": 1.0
     }
   },
   "pk": {
@@ -28,5 +28,5 @@
     }
   },
   "poke": {},
-  "updated": "2026-08-04T08:22:43.613661+00:00"
+  "updated": "2026-08-05T08:19:47.429954+00:00"
 }
